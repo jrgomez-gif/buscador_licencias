@@ -16,17 +16,11 @@ ORO_GOB = "#D4C19C"    # Oro Institucional
 
 st.markdown(f"""
     <style>
-    /* SOLUCIÓN A TU PROBLEMA:
-       Estilo del Menú Lateral (Sidebar) con Fondo VERDE
-       y Texto FORZADO A BLANCO para legibilidad.
-    */
+    /* Estilo del Menú Lateral (Sidebar) con Fondo VERDE y Texto BLANCO */
     [data-testid="stSidebar"] {{
         background-color: {VERDE_GOB};
     }}
     
-    /* Forzar color de texto BLANCO para todos los elementos
-       dentro del sidebar. Targeteamos selectores específicos.
-    */
     [data-testid="stSidebar"] .stMarkdown p, 
     [data-testid="stSidebar"] h1, 
     [data-testid="stSidebar"] h2, 
@@ -37,7 +31,6 @@ st.markdown(f"""
         color: white !important;
     }}
     
-    /* Estilo para los textos de ayuda y subtítulos en el sidebar */
     [data-testid="stSidebar"] .stCaption {{
         color: #e0e0e0 !important;
     }}
@@ -116,11 +109,9 @@ df_total = generar_universo_datos()
 # --- LÓGICA DE RESETEO (CALLBACK) ---
 def reset_filtros():
     """Función para restablecer los filtros a su estado inicial."""
-    # Obtenemos los valores por defecto
     tipos_disponibles = sorted(df_total['Tipo'].unique())
     estatus_disponibles = sorted(df_total['Estatus'].unique())
     
-    # Actualizamos el session_state
     st.session_state["tipo_filter"] = tipos_disponibles
     st.session_state["estatus_filter"] = estatus_disponibles
     st.session_state["search_input"] = ""
@@ -129,7 +120,6 @@ def reset_filtros():
 # 3. SIDEBAR (MENÚ IZQUIERDO)
 # ==========================================
 with st.sidebar:
-    # Usando ruta relativa para GitHub / Streamlit Cloud
     logo_path = "COFEPRIS.png"
     try:
         st.image(logo_path, width=220)
@@ -138,11 +128,9 @@ with st.sidebar:
     
     st.header("Filtros de Búsqueda")
     
-    # Obtenemos los valores por defecto para los multiselects
     tipos_disponibles = sorted(df_total['Tipo'].unique())
     estatus_disponibles = sorted(df_total['Estatus'].unique())
 
-    # Multiselectores con llaves (keys) vinculadas para el reset
     st.multiselect("Tipo de Licencia:", options=tipos_disponibles, 
                    default=tipos_disponibles, key="tipo_filter")
     
@@ -151,7 +139,6 @@ with st.sidebar:
     
     st.divider()
     
-    # BOTÓN DE RESETEO con callback para evitar errores de API
     st.button("🔄 Restablecer Filtros", on_click=reset_filtros)
     
     st.caption(f"v1.4 | COFEPRIS Data Science")
@@ -162,10 +149,10 @@ with st.sidebar:
 # ==========================================
 st.title("📂 Padrón Federal de Licencias Sanitarias")
 
-# Aplicar filtros basados en el session_state
+# Aplicar filtros
 df_filtrado = df_total[
-    df_total['Tipo'].isin(st.session_state["tipo_filter"]) & 
-    df_total['Estatus'].isin(st.session_state["estatus_filter"])
+    df_total['Tipo'].isin(st.session_state.get("tipo_filter", tipos_disponibles)) & 
+    df_total['Estatus'].isin(st.session_state.get("estatus_filter", estatus_disponibles))
 ]
 
 # Numeralia dinámica
@@ -181,12 +168,11 @@ with m4:
 
 st.write("")
 
-# BUSCADOR INTELIGENTE con llave vinculada para el reset
+# BUSCADOR INTELIGENTE
 busqueda_raw = st.text_input("🔍 Buscar por Empresa, RFC o Folio:", key="search_input", placeholder="Ej: laboratorios...")
 
 if busqueda_raw:
     term = normalizar_texto(busqueda_raw)
-    # Buscamos en todas las columnas convirtiendo la fila a un solo string normalizado
     mask = df_filtrado.apply(lambda row: term in normalizar_texto(" ".join(row.astype(str))), axis=1)
     df_filtrado = df_filtrado[mask]
 
@@ -209,14 +195,12 @@ if not df_filtrado.empty:
     st.divider()
     st.subheader("📝 Inspección Detallada")
     
-    # Selector de folio basado en la búsqueda actual
     folio_sel = st.selectbox("Seleccione un folio para ver el expediente:", df_filtrado['Folio'])
     info = df_total[df_total['Folio'] == folio_sel].iloc[0]
 
     col_info, col_doc = st.columns([1, 1.2])
 
     with col_info:
-        # Ficha Técnica con diseño COFEPRIS
         st.markdown(f"""
             <div class="ficha-tecnica">
                 <h2 style='color: {VERDE_GOB}; margin: 0;'>{info['Empresa']}</h2>
@@ -232,13 +216,9 @@ if not df_filtrado.empty:
                 </h3>
             </div>
         """, unsafe_allow_html=True)
-        
-        # Como solicitaste, se eliminó el botón de desbloqueo/edición.
 
-   with col_doc:
-        # Previsualización del documento
+    with col_doc:
         st.info(f"Visualización de Expediente Digital: {info['Folio']}")
-        # Placeholder del PDF. En producción, aquí se incrusta el documento real.
         st.image("https://www.gob.mx/cms/uploads/article/main_image/83942/Licencia.JPG", 
                  caption="Copia Digital Certificada", use_container_width=True)
 else:
