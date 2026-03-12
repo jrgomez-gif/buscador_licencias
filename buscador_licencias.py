@@ -235,13 +235,11 @@ if not df_filtrado.empty:
         
         # Como solicitaste, se eliminó el botón de desbloqueo/edición.
 
-    with col_doc:
+   with col_doc:
         # Previsualización del documento
         st.info(f"Visualización de Expediente Digital: {info['Folio']}")
         # Placeholder del PDF. En producción, aquí se incrusta el documento real.
         st.image("https://www.gob.mx/cms/uploads/article/main_image/83942/Licencia.JPG", 
                  caption="Copia Digital Certificada", use_container_width=True)
-        # Botón de descarga con el color institucional
-        st.download_button("📥 Descargar Archivo PDF", "PDF_DATA", file_name=f"{info['Folio']}.pdf")
 else:
     st.warning("No se encontraron registros.")
