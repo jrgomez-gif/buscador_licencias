@@ -129,8 +129,8 @@ def reset_filtros():
 # 3. SIDEBAR (MENÚ IZQUIERDO)
 # ==========================================
 with st.sidebar:
-    # Intento de cargar logo local. Ajusta la ruta si es necesario.
-    logo_path = r"C:\Users\jrgomez\Documents\Buscador de Licencias\COFEPRIS.png"
+    # Usando ruta relativa para GitHub / Streamlit Cloud
+    logo_path = "COFEPRIS.png"
     try:
         st.image(logo_path, width=220)
     except:
