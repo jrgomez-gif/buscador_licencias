@@ -83,20 +83,30 @@ opciones_tipo = ["Todos"] + sorted(df_total['Tipo'].unique())
 opciones_estatus = ["Todos"] + sorted(df_total['Estatus'].unique())
 
 # ==========================================
-# 3. SIDEBAR
+# 3. SIDEBAR (CONTEXTO EDUCATIVO E INSTRUCCIONES)
 # ==========================================
 with st.sidebar:
     try:
-        # Apunta al logo local en el directorio de GitHub
         st.image("COFEPRIS.png", width=220)
     except Exception:
-        st.warning("⚠️ Logo 'COFEPRIS.png' no encontrado. Verifica el nombre del archivo en el repositorio.")
+        st.warning("⚠️ Logo 'COFEPRIS.png' no encontrado.")
         
-    st.header("📖 Guía de Estatus")
+    st.header("📖 Guía de Usuario")
+    
     st.markdown("""
-    * **✅ Vigente:** Licencia activa y aprobada.
-    * **⚠️ Vencida:** Plazo expirado. Requiere renovación.
-    * **⏳ En Proceso:** Trámite bajo evaluación.
+    ### ¿Qué es una Licencia Sanitaria?
+    Es la autorización oficial expedida por la autoridad sanitaria que permite a un establecimiento operar legalmente, garantizando que cumple con las condiciones de higiene y seguridad para la salud pública.
+
+    ### Significado de los Estatus:
+    * **✅ Vigente:** Licencia activa, aprobada y dentro de su periodo de validez legal.
+    * **⚠️ Vencida:** El plazo ha expirado. Requiere iniciar trámite de renovación inmediatamente.
+    * **⏳ En Proceso:** Trámite ingresado y actualmente bajo evaluación de la autoridad.
+    
+    ---
+    ### 💡 Tip de Búsqueda:
+    1. Utiliza los filtros para encontrar el establecimiento.
+    2. Identifica el **Folio** en la tabla.
+    3. Copia y pega ese número en la sección de **"Inspección Detallada"** (al final de la página) para ver toda la información técnica.
     """)
     st.write("---")
     st.caption("v1.9 BI & Data Engineering COFEPRIS 2026")
@@ -133,7 +143,7 @@ if tipo_sel != "Todos":
 if estatus_sel != "Todos":
     df_filtrado = df_filtrado[df_filtrado['Estatus'] == estatus_sel]
 
-# 2. Filtro de búsqueda por texto libre (Aplica a todas las columnas)
+# 2. Filtro de búsqueda por texto libre
 if busqueda_texto:
     term = normalizar_texto(busqueda_texto)
     mask = df_filtrado.apply(lambda row: term in normalizar_texto(" ".join(row.astype(str))), axis=1)
@@ -150,6 +160,9 @@ with resumen_superior:
     with m4:
         vencidas = len(df_filtrado[df_filtrado['Estatus'].str.contains('⚠️')])
         st.markdown(f'<div class="metric-card"><h3>{vencidas}</h3><p>⚠️ VENCIDAS</p></div>', unsafe_allow_html=True)
+
+# ---> NOTIFICACIÓN RÁPIDA DE RESULTADOS <---
+st.info(f"🔎 **Se encontraron {len(df_filtrado)} licencias** aplicando los filtros actuales.")
 
 # Botón de Descarga
 with col_descarga:
@@ -176,13 +189,15 @@ else:
 if not df_filtrado.empty:
     st.write("---")
     st.subheader("📝 Inspección Detallada del Expediente")
-    folio_sel = st.selectbox("Seleccione un folio específico de la tabla superior:", df_filtrado['Folio'])
+    
+    # Campo para que el usuario busque / pegue el folio (cumpliendo con la indicación de la barra lateral)
+    folio_sel = st.selectbox("Seleccione o pegue un folio específico de la tabla superior para ver detalles:", df_filtrado['Folio'])
     info = df_total[df_total['Folio'] == folio_sel].iloc[0]
 
     st.markdown(f"""
         <div class="ficha-tecnica">
             <h2 style='color: {VERDE_GOB}; margin: 0;'>{info['Empresa']}</h2>
-            <p style='color: gray; margin-bottom: 20px;'>Folio: {info['Folio']}</p>
+            <p style='color: gray; margin-bottom: 20px;'>Folio de Control: {info['Folio']}</p>
             <p><b>🆔 RFC:</b> {info['RFC']}</p>
             <p><b>📋 Trámite:</b> {info['Tipo']}</p>
             <p><b>👨‍🔬 Responsable:</b> {info['Responsable']}</p>
