@@ -35,9 +35,16 @@ st.markdown(f"""
 # ==========================================
 # 2. FUNCIONES DE APOYO Y DATOS
 # ==========================================
+def normalizar_texto(texto):
+    """Limpia acentos y estandariza texto para búsquedas de lenguaje natural."""
+    if not isinstance(texto, str): return str(texto)
+    texto = unicodedata.normalize('NFD', texto)
+    texto = texto.encode('ascii', 'ignore').decode("utf-8")
+    return texto.lower()
+
 @st.cache_data
 def generar_universo_datos(n=1200):
-    empresas = ["Farmacéutica", "Laboratorios", "Distribuidora Médica", "Logística Sanitaria", "Bioquímicos", "Salud Total"]
+    empresas = ["Farmacéutica", "Laboratorios", "Distribuidora Médica PISA", "Logística Sanitaria", "Bioquímicos", "Salud Total"]
     regiones = ["Norte", "Sur", "Bajío", "Occidente", "Centro", "Global", "Nacional"]
     tipos = ["Licencia Sanitaria", "Permiso de Publicidad", "Aviso de Funcionamiento", "Registro Sanitario"]
     estatus_opciones = ["✅ Vigente", "✅ Vigente", "⚠️ Vencida", "⏳ En Proceso"]
@@ -79,14 +86,20 @@ opciones_estatus = ["Todos"] + sorted(df_total['Estatus'].unique())
 # 3. SIDEBAR
 # ==========================================
 with st.sidebar:
-    st.image("https://www.gob.mx/cms/uploads/image/file/489433/COFEPRIS_2018.png", width=220)
+    try:
+        # Apunta al logo local en el directorio de GitHub
+        st.image("COFEPRIS.png", width=220)
+    except Exception:
+        st.warning("⚠️ Logo 'COFEPRIS.png' no encontrado. Verifica el nombre del archivo en el repositorio.")
+        
     st.header("📖 Guía de Estatus")
     st.markdown("""
     * **✅ Vigente:** Licencia activa y aprobada.
     * **⚠️ Vencida:** Plazo expirado. Requiere renovación.
     * **⏳ En Proceso:** Trámite bajo evaluación.
     """)
-    st.caption("v1.9 | BI & Data Engineering")
+    st.write("---")
+    st.caption("v1.9 BI & Data Engineering COFEPRIS 2026")
 
 # ==========================================
 # 4. CUERPO PRINCIPAL (RESUMEN SUPERIOR)
@@ -96,25 +109,35 @@ resumen_superior = st.container()
 st.divider()
 
 # ==========================================
-# 5. TABLA, FILTROS (PICKLIST) Y DESCARGA
+# 5. TABLA, FILTROS Y DESCARGA
 # ==========================================
 col_tabla_header, col_descarga = st.columns([3, 1])
 with col_tabla_header:
     st.subheader("📋 Listado de Registros")
 
-# Filtros en formato Dropdown/Picklist limpios
-col_f1, col_f2 = st.columns(2)
+# Filtros: Búsqueda libre + Menús desplegables
+col_f1, col_f2, col_f3 = st.columns([2, 1.5, 1.5])
 with col_f1:
-    tipo_sel = st.selectbox("Filtrar por Tipo de Trámite:", options=opciones_tipo)
+    busqueda_texto = st.text_input("🔍 Búsqueda por palabra clave:", placeholder="Ej. PISA, Farmacéutica, Folio...")
 with col_f2:
+    tipo_sel = st.selectbox("Filtrar por Tipo de Trámite:", options=opciones_tipo)
+with col_f3:
     estatus_sel = st.selectbox("Filtrar por Estatus:", options=opciones_estatus)
 
-# Lógica condicional: Solo filtra si el usuario no seleccionó "Todos"
+# Lógica de filtrado combinada
 df_filtrado = df_total.copy()
+
+# 1. Filtros de lista desplegable
 if tipo_sel != "Todos":
     df_filtrado = df_filtrado[df_filtrado['Tipo'] == tipo_sel]
 if estatus_sel != "Todos":
     df_filtrado = df_filtrado[df_filtrado['Estatus'] == estatus_sel]
+
+# 2. Filtro de búsqueda por texto libre (Aplica a todas las columnas)
+if busqueda_texto:
+    term = normalizar_texto(busqueda_texto)
+    mask = df_filtrado.apply(lambda row: term in normalizar_texto(" ".join(row.astype(str))), axis=1)
+    df_filtrado = df_filtrado[mask]
 
 # Llenamos las métricas superiores con los datos filtrados
 with resumen_superior:
@@ -140,7 +163,7 @@ with col_descarga:
             use_container_width=True
         )
 
-# Renderizar la tabla con estilos
+# Renderizar la tabla con estilos (filas rojas para Vencidas)
 if not df_filtrado.empty:
     df_estilizado = df_filtrado.style.apply(resaltar_vencidas, axis=1)
     st.dataframe(df_estilizado, use_container_width=True, hide_index=True, height=350)
