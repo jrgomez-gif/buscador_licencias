@@ -75,7 +75,6 @@ def resaltar_vencidas(row):
         return ['background-color: #ffcccc; color: #900000; font-weight: bold;'] * len(row)
     return [''] * len(row)
 
-# --- LÓGICA DE RESETEO DE FILTROS ---
 def limpiar_filtros():
     st.session_state.search_input = ""
     st.session_state.tipo_input = "Todos"
@@ -83,17 +82,15 @@ def limpiar_filtros():
 
 df_total = generar_universo_datos()
 
-# Inicializamos el session_state si no existe para evitar errores al cargar la primera vez
 if 'search_input' not in st.session_state: st.session_state.search_input = ""
 if 'tipo_input' not in st.session_state: st.session_state.tipo_input = "Todos"
 if 'estatus_input' not in st.session_state: st.session_state.estatus_input = "Todos"
 
-# Preparamos las listas agregando "Todos" al inicio
 opciones_tipo = ["Todos"] + sorted(df_total['Tipo'].unique())
 opciones_estatus = ["Todos"] + sorted(df_total['Estatus'].unique())
 
 # ==========================================
-# 3. SIDEBAR (CONTEXTO EDUCATIVO E INSTRUCCIONES)
+# 3. SIDEBAR (CONTEXTO EDUCATIVO)
 # ==========================================
 with st.sidebar:
     try:
@@ -131,8 +128,6 @@ st.divider()
 # ==========================================
 # 5. TABLA, FILTROS Y DESCARGAS
 # ==========================================
-
-# Filtros: Búsqueda libre + Menús desplegables (ahora con el parámetro 'key' vinculado al session_state)
 col_f1, col_f2, col_f3 = st.columns([2, 1.5, 1.5])
 with col_f1:
     busqueda_texto = st.text_input("🔍 Búsqueda por palabra clave:", key="search_input", placeholder="Ej. PISA, Farmacéutica, Folio...")
@@ -141,7 +136,6 @@ with col_f2:
 with col_f3:
     estatus_sel = st.selectbox("Filtrar por Estatus:", options=opciones_estatus, key="estatus_input")
 
-# Lógica de filtrado combinada
 df_filtrado = df_total.copy()
 
 if tipo_sel != "Todos":
@@ -154,7 +148,6 @@ if busqueda_texto:
     mask = df_filtrado.apply(lambda row: term in normalizar_texto(" ".join(row.astype(str))), axis=1)
     df_filtrado = df_filtrado[mask]
 
-# Llenamos las métricas superiores con los datos filtrados
 with resumen_superior:
     m1, m2, m3, m4 = st.columns(4)
     with m1: st.markdown(f'<div class="metric-card"><h3>{len(df_total)}</h3><p>UNIVERSO TOTAL</p></div>', unsafe_allow_html=True)
@@ -166,20 +159,18 @@ with resumen_superior:
         vencidas = len(df_filtrado[df_filtrado['Estatus'].str.contains('⚠️')])
         st.markdown(f'<div class="metric-card"><h3>{vencidas}</h3><p>⚠️ VENCIDAS</p></div>', unsafe_allow_html=True)
 
-# ---> NOTIFICACIÓN RÁPIDA DE RESULTADOS <---
 st.info(f"🔎 **Se encontraron {len(df_filtrado)} licencias** aplicando los filtros actuales.")
 
-# --- BOTONES DE ACCIÓN (Alineados sobre la tabla) ---
 col_tabla_header, col_reset, col_descarga = st.columns([2.5, 1, 1])
 with col_tabla_header:
     st.subheader("📋 Listado de Registros")
 with col_reset:
-    st.write("") # Espaciador para alinear con el título
+    st.write("") 
     st.button("🔄 Limpiar Filtros", on_click=limpiar_filtros, use_container_width=True)
 with col_descarga:
     if not df_filtrado.empty:
         excel_data = to_excel(df_filtrado)
-        st.write("") # Espaciador para alinear con el título
+        st.write("") 
         st.download_button(
             label="📥 Descargar en Excel", data=excel_data,
             file_name=f"Padron_Licencias_{datetime.now().strftime('%Y%m%d')}.xlsx",
@@ -187,7 +178,6 @@ with col_descarga:
             use_container_width=True
         )
 
-# Renderizar la tabla con estilos (filas rojas para Vencidas)
 if not df_filtrado.empty:
     df_estilizado = df_filtrado.style.apply(resaltar_vencidas, axis=1)
     st.dataframe(df_estilizado, use_container_width=True, hide_index=True, height=350)
@@ -195,27 +185,39 @@ else:
     st.warning("No hay registros que coincidan con la selección.")
 
 # ==========================================
-# 6. FICHA TÉCNICA
+# 6. FICHA TÉCNICA (NUEVO BUSCADOR DE TEXTO LIBRE)
 # ==========================================
-if not df_filtrado.empty:
-    st.write("---")
-    st.subheader("📝 Inspección Detallada del Expediente")
-    
-    folio_sel = st.selectbox("Seleccione o pegue un folio específico de la tabla superior para ver detalles:", df_filtrado['Folio'])
-    info = df_total[df_total['Folio'] == folio_sel].iloc[0]
+st.write("---")
+st.subheader("📝 Inspección Detallada del Expediente")
 
-    st.markdown(f"""
-        <div class="ficha-tecnica">
-            <h2 style='color: {VERDE_GOB}; margin: 0;'>{info['Empresa']}</h2>
-            <p style='color: gray; margin-bottom: 20px;'>Folio de Control: {info['Folio']}</p>
-            <p><b>🆔 RFC:</b> {info['RFC']}</p>
-            <p><b>📋 Trámite:</b> {info['Tipo']}</p>
-            <p><b>👨‍🔬 Responsable:</b> {info['Responsable']}</p>
-            <p><b>📍 Ubicación:</b> {info['Ubicación']}</p>
-            <p><b>📅 Vigencia:</b> {info['Vigencia']}</p>
-            <hr>
-            <h3 style='color: {"green" if "✅" in info["Estatus"] else "orange" if "⏳" in info["Estatus"] else "#900000"};'>
-                Estado actual: {info['Estatus']}
-            </h3>
-        </div>
-    """, unsafe_allow_html=True)
+# Cambiamos selectbox por text_input para facilitar el Copiar/Pegar
+folio_busqueda = st.text_input("🔎 Pegue o escriba el Folio a inspeccionar (Ej. 2026-CAS-0001):", key="folio_ficha")
+
+if folio_busqueda:
+    term_folio = normalizar_texto(folio_busqueda).strip()
+    # Buscamos en el total de datos (por si el usuario busca un folio que no está en los filtros actuales)
+    mask_ficha = df_total['Folio'].apply(lambda f: term_folio in normalizar_texto(str(f)))
+    coincidencias = df_total[mask_ficha]
+    
+    if not coincidencias.empty:
+        info = coincidencias.iloc[0] # Mostramos el primer resultado coincidente
+        
+        st.markdown(f"""
+            <div class="ficha-tecnica">
+                <h2 style='color: {VERDE_GOB}; margin: 0;'>{info['Empresa']}</h2>
+                <p style='color: gray; margin-bottom: 20px;'>Folio de Control: {info['Folio']}</p>
+                <p><b>🆔 RFC:</b> {info['RFC']}</p>
+                <p><b>📋 Trámite:</b> {info['Tipo']}</p>
+                <p><b>👨‍🔬 Responsable:</b> {info['Responsable']}</p>
+                <p><b>📍 Ubicación:</b> {info['Ubicación']}</p>
+                <p><b>📅 Vigencia:</b> {info['Vigencia']}</p>
+                <hr>
+                <h3 style='color: {"green" if "✅" in info["Estatus"] else "orange" if "⏳" in info["Estatus"] else "#900000"};'>
+                    Estado actual: {info['Estatus']}
+                </h3>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.warning(f"⚠️ No se encontró ningún expediente asociado al folio o término: '{folio_busqueda}'.")
+else:
+    st.info("👆 Copie un Folio de la tabla superior y péguelo en el recuadro de arriba para visualizar su ficha técnica completa.")
